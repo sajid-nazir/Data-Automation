@@ -20,7 +20,12 @@ class SECRequestError(RuntimeError):
 
 
 class SECClient:
-    """Rate-limited, retrying HTTP client for the SEC submissions API."""
+    """Rate-limited, retrying HTTP client for the SEC submissions API and archive documents.
+
+    All requests to sec.gov (submissions JSON and archived filing documents alike) go
+    through this client, so every call is subject to the same throttle, User-Agent, and
+    retry/backoff policy.
+    """
 
     def __init__(self, settings: Settings = settings) -> None:
         self._settings = settings
@@ -46,9 +51,13 @@ class SECClient:
     def get_submissions(self, cik: str) -> dict[str, Any]:
         """Fetch the raw submissions JSON for a given (zero-padded) CIK."""
         url = f"{self._settings.submissions_base_url}/CIK{cik.zfill(10)}.json"
-        return self._get_json(url)
+        return cast(dict[str, Any], self._request(url).json())
 
-    def _get_json(self, url: str) -> dict[str, Any]:
+    def get_document(self, url: str) -> str:
+        """Fetch a filing document's raw HTML (or other text) from the SEC archive."""
+        return self._request(url).text
+
+    def _request(self, url: str) -> httpx.Response:
         last_error: Exception | None = None
 
         for attempt in range(1, self._settings.max_retries + 1):
@@ -64,7 +73,7 @@ class SECClient:
             else:
                 if response.status_code not in _RETRYABLE_STATUS_CODES:
                     response.raise_for_status()
-                    return cast(dict[str, Any], response.json())
+                    return response
                 last_error = httpx.HTTPStatusError(
                     f"SEC returned {response.status_code} for {url}",
                     request=response.request,
