@@ -1,0 +1,14 @@
+services:
+  sec-10k-fetcher:
+    build: .
+    image: sec-10k-fetcher:latest
+    # Matches the container's appuser (uid/gid 1000) to the host user by default so
+    # files written into the bind-mounted ./output stay owned by you, not root/1000-in-container.
+    # Override with `UID=$(id -u) GID=$(id -g) docker compose run ...` if your host user differs.
+    user: "${UID:-1000}:${GID:-1000}"
+    environment:
+      SEC_USER_AGENT: ${SEC_USER_AGENT:-SEC 10-K Fetcher sajidchnazir@gmail.com}
+    volumes:
+      - ./output:/app/output
+    # No tickers here means the pipeline defaults to every company in TARGET_COMPANIES.
+    # command: ["AAPL", "META"]
