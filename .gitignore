@@ -1,0 +1,25 @@
+# Virtual Environment
+.venv/
+venv/
+ENV/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Data
+output/
+downloads/
+temp/
+*.pdf
+*.htm
+*.html
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
