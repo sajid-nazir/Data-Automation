@@ -3,3 +3,6 @@ pytest>=8.0
 pytest-mock>=3.12
 mypy>=1.9
 ruff>=0.4
+# For regenerating requirements.lock:
+#   pip-compile --generate-hashes pyproject.toml -o requirements.lock
+pip-tools>=7.4

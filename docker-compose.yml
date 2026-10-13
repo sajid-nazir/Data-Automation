@@ -2,9 +2,12 @@ services:
   sec-10k-fetcher:
     build: .
     image: sec-10k-fetcher:latest
-    # Matches the container's appuser (uid/gid 1000) to the host user by default so
-    # files written into the bind-mounted ./output stay owned by you, not root/1000-in-container.
-    # Override with `UID=$(id -u) GID=$(id -g) docker compose run ...` if your host user differs.
+    # Defaults to 1000:1000 (the image's appuser) - NOT your actual host UID/GID.
+    # Bash does not export $UID/$GID to child processes by default, so this
+    # variable substitution almost always falls through to the hardcoded default
+    # regardless of your real user. If your host UID/GID aren't 1000, bind-mounted
+    # ./output will be owned by a different user than you inside the container;
+    # run `UID=$(id -u) GID=$(id -g) docker compose run ...` explicitly to fix that.
     user: "${UID:-1000}:${GID:-1000}"
     environment:
       SEC_USER_AGENT: ${SEC_USER_AGENT:-SEC 10-K Fetcher sajidchnazir@gmail.com}
