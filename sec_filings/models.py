@@ -44,8 +44,11 @@ class FilingMetadata(BaseModel):
     @field_validator("form_type")
     @classmethod
     def _validate_form_type(cls, value: str) -> str:
-        if not value.startswith("10-K"):
-            raise ValueError(f"Expected a 10-K form type, got {value!r}")
+        # Exact match only: the resolver's contract is a standard 10-K, never an
+        # amendment (10-K/A), transition report (10-KT), or other variant - those
+        # are deliberately skipped during resolution, not merely tolerated here.
+        if value != "10-K":
+            raise ValueError(f"Expected exactly '10-K', got {value!r}")
         return value
 
     @property

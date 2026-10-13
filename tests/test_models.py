@@ -41,6 +41,13 @@ def test_rejects_non_10k_form_type():
         FilingMetadata(**{**VALID_KWARGS, "form_type": "10-Q"})
 
 
-def test_accepts_10k_amendment():
-    filing = FilingMetadata(**{**VALID_KWARGS, "form_type": "10-K/A"})
-    assert filing.form_type == "10-K/A"
+def test_rejects_10k_amendment():
+    # form_type is an exact "10-K" match only - amendments are a resolver-level
+    # decision to skip, not a schema the model should merely tolerate.
+    with pytest.raises(ValidationError):
+        FilingMetadata(**{**VALID_KWARGS, "form_type": "10-K/A"})
+
+
+def test_rejects_10k_transition_report_variant():
+    with pytest.raises(ValidationError):
+        FilingMetadata(**{**VALID_KWARGS, "form_type": "10-KT"})
