@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from src.config import TARGET_COMPANIES, settings
-from src.pipeline import run
+from src.pipeline import main, run
 
 
 def _submissions_with_10k(accession: str, filing_date: str, report_date: str, doc: str) -> dict:
@@ -61,10 +61,12 @@ def mock_converter() -> MagicMock:
 
 @pytest.fixture(autouse=True)
 def _patch_client_and_converter(mock_client: MagicMock, mock_converter: MagicMock):
-    with patch("src.pipeline.SECClient", _as_context_manager(mock_client)), patch(
-        "src.pipeline.HTMLToPDFConverter", _as_context_manager(mock_converter)
+    client_cls = _as_context_manager(mock_client)
+    converter_cls = _as_context_manager(mock_converter)
+    with patch("src.pipeline.SECClient", client_cls), patch(
+        "src.pipeline.HTMLToPDFConverter", converter_cls
     ):
-        yield
+        yield client_cls, converter_cls
 
 
 def test_run_defaults_to_all_target_companies_when_no_tickers_given(
@@ -156,7 +158,60 @@ def test_run_skips_unknown_ticker_without_crashing(
 
     mock_client.get_submissions.assert_not_called()
     mock_converter.convert_html_to_pdf.assert_not_called()
-    assert any("Failed to process ZZZZ" in record.message for record in caplog.records)
+    assert any("Unknown ticker 'ZZZZ'" in record.message for record in caplog.records)
+
+
+def test_run_never_launches_client_or_browser_when_all_tickers_unknown(
+    _patch_client_and_converter: tuple[MagicMock, MagicMock],
+):
+    client_cls, converter_cls = _patch_client_and_converter
+
+    run(["ZZZZ", "NOTREAL"])
+
+    client_cls.return_value.__enter__.assert_not_called()
+    converter_cls.return_value.__enter__.assert_not_called()
+
+
+def test_run_returns_true_when_every_ticker_succeeds(
+    mock_client: MagicMock, mock_converter: MagicMock
+):
+    mock_client.get_submissions.return_value = _submissions_with_10k(
+        "0000320193-24-000123", "2024-10-01", "2024-09-28", "aapl-20240928.htm"
+    )
+    mock_client.get_document.return_value = "<html>filing</html>"
+
+    assert run(["AAPL"]) is True
+
+
+def test_run_returns_false_when_a_ticker_fails(
+    mock_client: MagicMock, mock_converter: MagicMock
+):
+    mock_client.get_submissions.side_effect = RuntimeError("SEC unreachable")
+
+    assert run(["AAPL"]) is False
+
+
+def test_run_returns_false_when_a_ticker_is_unknown(
+    mock_client: MagicMock, mock_converter: MagicMock
+):
+    assert run(["ZZZZ"]) is False
+
+
+def test_main_returns_nonzero_exit_code_on_failure(mock_client: MagicMock):
+    mock_client.get_submissions.side_effect = RuntimeError("SEC unreachable")
+
+    assert main(["AAPL"]) != 0
+
+
+def test_main_returns_zero_exit_code_on_success(
+    mock_client: MagicMock, mock_converter: MagicMock
+):
+    mock_client.get_submissions.return_value = _submissions_with_10k(
+        "0000320193-24-000123", "2024-10-01", "2024-09-28", "aapl-20240928.htm"
+    )
+    mock_client.get_document.return_value = "<html>filing</html>"
+
+    assert main(["AAPL"]) == 0
 
 
 def test_run_logs_warning_and_skips_conversion_when_no_10k_found(

@@ -12,11 +12,24 @@ from src.config import Settings, settings
 
 logger = logging.getLogger(__name__)
 
-_RETRYABLE_STATUS_CODES = {429, 503}
+# 429/503 are SEC's own rate-limit signals; 500/502/504 are transient upstream/edge
+# errors worth a retry. 403/404 and other 4xx are not retried: they won't resolve
+# on their own and retrying them just burns the request budget.
+_RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+
+# A literal fragment of SEC's "Undeclared Automated Tool" block page. If this ever
+# shows up in a response body, the request wasn't actually denied (no 4xx/5xx) but
+# the content isn't the document we asked for either - worth failing loudly instead
+# of silently saving the block page as if it were a filing.
+_BLOCK_PAGE_MARKER = "Your Request Originates from an Undeclared Automated Tool"
 
 
 class SECRequestError(RuntimeError):
     """Raised when a SEC EDGAR request fails after exhausting all retry attempts."""
+
+
+class SECBlockedError(SECRequestError):
+    """Raised when SEC serves its automated-traffic block page instead of the document."""
 
 
 class SECClient:
@@ -55,7 +68,17 @@ class SECClient:
 
     def get_document(self, url: str) -> str:
         """Fetch a filing document's raw HTML (or other text) from the SEC archive."""
-        return self._request(url).text
+        text = self._request(url).text
+        if _BLOCK_PAGE_MARKER in text:
+            raise SECBlockedError(
+                f"SEC served its automated-traffic block page for {url} "
+                "instead of the requested document"
+            )
+        return text
+
+    def get_binary(self, url: str) -> bytes:
+        """Fetch raw bytes (e.g. an image embedded in a filing) from the SEC archive."""
+        return self._request(url).content
 
     def _request(self, url: str) -> httpx.Response:
         last_error: Exception | None = None
@@ -85,12 +108,23 @@ class SECClient:
                 )
 
             if attempt < self._settings.max_retries:
-                backoff = self._settings.backoff_base_seconds * (2 ** (attempt - 1))
-                time.sleep(backoff)
+                time.sleep(self._backoff_seconds(attempt, last_error))
 
         raise SECRequestError(
             f"Failed to fetch {url} after {self._settings.max_retries} attempt(s)"
         ) from last_error
+
+    def _backoff_seconds(self, attempt: int, error: Exception | None) -> float:
+        """Honor a server-supplied Retry-After if present and larger than our own backoff."""
+        default: float = float(self._settings.backoff_base_seconds) * (2 ** (attempt - 1))
+        if isinstance(error, httpx.HTTPStatusError):
+            retry_after = error.response.headers.get("Retry-After")
+            if retry_after is not None:
+                try:
+                    return max(default, float(retry_after))
+                except ValueError:
+                    pass
+        return default
 
     def close(self) -> None:
         self._client.close()
