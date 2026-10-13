@@ -106,6 +106,71 @@ user to run and report back on.
 
 ---
 
+### 6. Rejection feedback, root-cause audit, and a second round of real bugs
+
+> "After careful consideration, we've decided not to move forward with your
+> application for the Senior role... concerns around error handling and the overall
+> quality of the output... Can you reflect on WHY it could've happened?"
+
+Rather than speculate, re-read `pipeline.py` directly and called the advisor tool for
+an independent read of the full session transcript. The advisor's response was blunt
+and specifically flagged that the prior claim of "verified... genuine filing" was based
+on `pdftotext` text extraction, never on actually looking at a rendered page — and that
+the README's stated root cause for the SEC block (`navigator.webdriver`) had never
+actually been isolated, only correlated.
+
+Reported six ranked findings back to the user (output quality unverified visually,
+no content validation on "success", CLI always exits 0, zero test coverage on the
+retry/backoff logic, late ticker validation, assorted hygiene issues) without touching
+any code, since the request was reflection, not a fix.
+
+> "Is that all? or anything else? create a 5 hour AFK plan and execute it to the very
+> minor details as possible. I want something as polished as the fuckin polish"
+>
+> (mid-turn) "don't push anything to remote, just make local commits. Work at least an
+> hour on your detailed plan. i am going afk"
+
+This is the one round where "is that all" led to actually finding more, rather than
+confirming nothing was missed. Investigation, in order:
+
+1. **Fetched the raw filing HTML directly** and found the exact `<img
+   src="aapl-20250927_g1.jpg">` tag behind the "g6614" alt-text that had been visible,
+   unremarked on, in every screenshot since the architecture fix — a real, reproducible
+   broken-image bug, live since round 3.
+2. **Tested the `navigator.webdriver` claim empirically** by patching it to `false` via
+   `page.add_init_script` and re-running against the live block. The block persisted.
+   The claim in the README was wrong, not just unverified. Captured Playwright's actual
+   outgoing request headers and found the real signal: `Sec-CH-UA` announces
+   `"HeadlessChrome"` in plain text on every request Chromium sends.
+3. **Visually inspected the previously-"verified" PDF** by rendering its pages to PNG
+   instead of trusting another `pdftotext` run. It was genuinely truncated — 8 physical
+   pages, cut off during Item 1A, with the rest of the content (through the page-58
+   signature block) present in extracted text but never actually laid out on a visible
+   page.
+4. **Formed a specific hypothesis** (a dangling absolute-path `<script>` tag resolving
+   to nothing under `file://`, causing a race on the `load` event) and **tested it
+   directly** — 3 trials with the tag, 3 without, both gave 61 pages, both consistently.
+   The hypothesis was wrong. This was reported to the user as disproven rather than
+   quietly dropped; the script tag was still stripped afterward, but documented as
+   general hygiene (dead reference, unrelated to the original truncation) rather than
+   "the fix" for a bug that could no longer be reproduced on demand.
+
+**Output:** `src/sanitizer.py` (new — `strip_scripts`, `inline_images`, fetched through
+`SECClient` so Playwright still touches no network); `SECClient.get_binary()`,
+broadened retry codes (`500`/`502`/`504` added to `429`/`503`), `Retry-After` header
+support, and `SECBlockedError` for a `200` response that's actually SEC's block page;
+`pipeline.py` validates tickers before starting a client/browser and `run()`/`main()`
+now propagate batch failure to the process exit code; a best-effort page-count
+mismatch warning in `converter.py` for the truncation case that couldn't be
+conclusively root-caused. `tests/test_client.py` (new — zero coverage before this) and
+`tests/test_sanitizer.py` (new). `README.md`'s root-cause section rewritten with the
+header evidence, explicitly noting the retracted `navigator.webdriver` claim rather
+than silently replacing it. Verified live against all 6 target companies, not just
+AAPL — correct page counts (61–253, Goldman Sachs's bank-sized disclosures included),
+all images present, no truncation warnings logged.
+
+---
+
 ## Notes on the workflow
 
 - Each implementation step was followed by actually running it — `pytest`, `mypy
@@ -117,3 +182,12 @@ user to run and report back on.
   had already shipped with passing tests in the prior turn. That kind of change went
   through a confirmation step before the rewrite, since it affected files the user had
   already accepted as finished.
+- Round 6 is the clearest example in this log of where verification had been
+  insufficient: a filing had been accepted as "genuine" based on `pdftotext` output,
+  and a root-cause claim had been written into the README based on correlation
+  (`navigator.webdriver` was `true` on a blocked request) rather than an isolated test.
+  Both were wrong, and both were only caught by generating actual images/headers and
+  looking at them. A specific fix hypothesis formed during that same round (the
+  dangling script tag causing the truncation) was then tested the same way and turned
+  out to be wrong too — that result was kept in this log rather than only recording the
+  hypotheses that panned out.
