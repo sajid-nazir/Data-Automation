@@ -61,7 +61,7 @@ class HTMLToPDFConverter:
         self._playwright: Playwright | None = None
         self._browser: Browser | None = None
 
-    def __enter__(self) -> "HTMLToPDFConverter":
+    def __enter__(self) -> HTMLToPDFConverter:
         stack = contextlib.ExitStack()
         try:
             self._playwright = sync_playwright().start()

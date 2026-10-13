@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -8,7 +9,9 @@ from sec_filings.config import TARGET_COMPANIES, Settings
 from sec_filings.pipeline import main, run
 
 
-def _submissions_with_10k(accession: str, filing_date: str, report_date: str, doc: str) -> dict:
+def _submissions_with_10k(
+    accession: str, filing_date: str, report_date: str, doc: str
+) -> dict[str, Any]:
     return {
         "filings": {
             "recent": {
@@ -23,7 +26,7 @@ def _submissions_with_10k(accession: str, filing_date: str, report_date: str, do
     }
 
 
-def _submissions_with_no_10k() -> dict:
+def _submissions_with_no_10k() -> dict[str, Any]:
     return {
         "filings": {
             "recent": {
@@ -233,14 +236,14 @@ def test_run_logs_error_and_fails_when_no_10k_found(
 
     mock_client.get_document.assert_not_called()
     mock_converter.convert.assert_not_called()
-    assert result.failed == ["AAPL"]  # this is the regression test for exit-code-0-on-silent-failure
+    assert result.failed == ["AAPL"]  # regression test: exit-code-0-on-silent-failure
 
 
 def test_run_counts_every_known_ticker_as_failed_when_browser_fails_to_start(
     mock_client: MagicMock, test_settings: Settings,
     _patch_client_and_converter: tuple[MagicMock, MagicMock],
 ):
-    client_cls, converter_cls = _patch_client_and_converter
+    _client_cls, converter_cls = _patch_client_and_converter
     converter_cls.return_value.__enter__.side_effect = RuntimeError("no browser binary")
 
     result = run(["AAPL", "META"], settings=test_settings)

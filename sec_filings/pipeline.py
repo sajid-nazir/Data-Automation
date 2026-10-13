@@ -91,7 +91,8 @@ def run(tickers: Sequence[str] | None = None, settings: Settings | None = None) 
     known_tickers = [t for t in resolved_tickers if t not in unknown]
 
     logger.info(
-        "Starting 10-K fetch for %d ticker(s): %s", len(resolved_tickers), ", ".join(resolved_tickers)
+        "Starting 10-K fetch for %d ticker(s): %s",
+        len(resolved_tickers), ", ".join(resolved_tickers),
     )
 
     result = RunResult(failed=list(unknown))
@@ -136,7 +137,9 @@ def run(tickers: Sequence[str] | None = None, settings: Settings | None = None) 
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Exit codes: 0 all succeeded, 1 any expected failure, 3 any unexpected crash."""
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
+    )
     args = _parse_args(argv)
     result = run(args.tickers or None)
     if result.crashed:

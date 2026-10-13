@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Any
 
 import pytest
 
@@ -6,9 +7,13 @@ from sec_filings.config import Settings
 from sec_filings.errors import FilingNotFoundError, SECResponseError, StaleFilingError
 from sec_filings.resolver import resolve_latest_10k
 
+_EMPTY_COLUMNS: dict[str, list[str]] = {
+    "form": [], "accessionNumber": [], "filingDate": [], "reportDate": [], "primaryDocument": [],
+}
+
 
 @pytest.fixture
-def submissions_payload() -> dict:
+def submissions_payload() -> dict[str, Any]:
     """Mimics filings.recent's parallel-array shape, newest filing first.
 
     Includes a newer 10-K/A ahead of the standard 10-K to verify amendments
@@ -58,7 +63,7 @@ def recent_today() -> date:
 
 
 def test_resolves_first_standard_10k_skipping_amendments(
-    submissions_payload: dict, test_settings: Settings, recent_today: date
+    submissions_payload: dict[str, Any], test_settings: Settings, recent_today: date
 ):
     filing = resolve_latest_10k(
         submissions_payload,
@@ -97,7 +102,7 @@ def test_picks_latest_filing_date_among_multiple_10ks(test_settings: Settings, r
 
 
 def test_builds_archive_url_with_unpadded_cik_and_unhyphenated_accession(
-    submissions_payload: dict, test_settings: Settings, recent_today: date
+    submissions_payload: dict[str, Any], test_settings: Settings, recent_today: date
 ):
     filing = resolve_latest_10k(
         submissions_payload, ticker="AAPL", company_name="Apple", cik="0000320193",
@@ -110,7 +115,7 @@ def test_builds_archive_url_with_unpadded_cik_and_unhyphenated_accession(
 
 
 def test_passes_through_ticker_and_company_name(
-    submissions_payload: dict, test_settings: Settings, recent_today: date
+    submissions_payload: dict[str, Any], test_settings: Settings, recent_today: date
 ):
     filing = resolve_latest_10k(
         submissions_payload, ticker="AAPL", company_name="Apple", cik="0000320193",
@@ -147,7 +152,7 @@ def test_raises_filing_not_found_when_no_standard_10k_and_no_fallback(test_setti
 
 
 def test_raises_filing_not_found_when_recent_is_empty(test_settings: Settings):
-    payload = {"filings": {"recent": {}, "files": []}}
+    payload: dict[str, Any] = {"filings": {"recent": {}, "files": []}}
 
     with pytest.raises(FilingNotFoundError):
         resolve_latest_10k(
@@ -227,7 +232,7 @@ def test_falls_back_to_overflow_page_when_recent_has_no_10k(
         "primaryDocument": ["gs-10k.htm"],
     }
 
-    def fetch_page(name: str) -> dict:
+    def fetch_page(name: str) -> dict[str, Any]:
         assert name == "CIK0000886982-submissions-001.json"
         return overflow_page
 
@@ -241,7 +246,7 @@ def test_falls_back_to_overflow_page_when_recent_has_no_10k(
 def test_pagination_checks_pages_newest_first(test_settings: Settings):
     payload = {
         "filings": {
-            "recent": {"form": [], "accessionNumber": [], "filingDate": [], "reportDate": [], "primaryDocument": []},
+            "recent": _EMPTY_COLUMNS,
             "files": [
                 {"name": "CIK0000886982-submissions-001.json", "filingTo": "2022-12-31"},
                 {"name": "CIK0000886982-submissions-002.json", "filingTo": "2023-12-31"},
@@ -250,7 +255,7 @@ def test_pagination_checks_pages_newest_first(test_settings: Settings):
     }
     fetched_order: list[str] = []
 
-    def fetch_page(name: str) -> dict:
+    def fetch_page(name: str) -> dict[str, Any]:
         fetched_order.append(name)
         if name == "CIK0000886982-submissions-002.json":
             return {
@@ -260,7 +265,7 @@ def test_pagination_checks_pages_newest_first(test_settings: Settings):
                 "reportDate": ["2022-12-31"],
                 "primaryDocument": ["gs-10k.htm"],
             }
-        return {"form": [], "accessionNumber": [], "filingDate": [], "reportDate": [], "primaryDocument": []}
+        return _EMPTY_COLUMNS
 
     resolve_latest_10k(
         payload, ticker="GS", company_name="Goldman Sachs", cik="0000886982",
@@ -272,13 +277,16 @@ def test_pagination_checks_pages_newest_first(test_settings: Settings):
 def test_raises_filing_not_found_when_no_10k_in_any_overflow_page(test_settings: Settings):
     payload = {
         "filings": {
-            "recent": {"form": [], "accessionNumber": [], "filingDate": [], "reportDate": [], "primaryDocument": []},
+            "recent": _EMPTY_COLUMNS,
             "files": [{"name": "CIK0000886982-submissions-001.json", "filingTo": "2022-12-31"}],
         }
     }
 
-    def fetch_page(name: str) -> dict:
-        return {"form": ["10-Q"], "accessionNumber": ["x"], "filingDate": ["2022-01-01"], "reportDate": ["2021-12-31"], "primaryDocument": ["x.htm"]}
+    def fetch_page(name: str) -> dict[str, Any]:
+        return {
+            "form": ["10-Q"], "accessionNumber": ["x"], "filingDate": ["2022-01-01"],
+            "reportDate": ["2021-12-31"], "primaryDocument": ["x.htm"],
+        }
 
     with pytest.raises(FilingNotFoundError):
         resolve_latest_10k(
@@ -290,7 +298,7 @@ def test_raises_filing_not_found_when_no_10k_in_any_overflow_page(test_settings:
 def test_no_fallback_attempted_when_fetch_page_not_given(test_settings: Settings):
     payload = {
         "filings": {
-            "recent": {"form": [], "accessionNumber": [], "filingDate": [], "reportDate": [], "primaryDocument": []},
+            "recent": _EMPTY_COLUMNS,
             "files": [{"name": "CIK0000886982-submissions-001.json", "filingTo": "2022-12-31"}],
         }
     }

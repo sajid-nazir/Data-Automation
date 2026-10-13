@@ -39,7 +39,9 @@ _SUBMISSIONS_PAGE_NAME = re.compile(r"^CIK\d{10}-submissions-\d{3}\.json$")
 # Transport-level failures worth retrying: timeouts and connection drops are
 # transient. Everything else (UnsupportedProtocol, InvalidURL, ...) is a
 # deterministic error that retrying can't fix.
-_RETRYABLE_TRANSPORT_ERRORS = (httpx.TimeoutException, httpx.NetworkError, httpx.RemoteProtocolError)
+_RETRYABLE_TRANSPORT_ERRORS = (
+    httpx.TimeoutException, httpx.NetworkError, httpx.RemoteProtocolError,
+)
 
 
 class SECClient:
@@ -62,7 +64,7 @@ class SECClient:
             event_hooks={"request": [self._check_host]},
         )
 
-    def __enter__(self) -> "SECClient":
+    def __enter__(self) -> SECClient:
         return self
 
     def __exit__(self, *exc_info: object) -> None:

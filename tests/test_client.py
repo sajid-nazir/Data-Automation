@@ -316,7 +316,9 @@ def test_non_dict_json_body_raises_response_error(test_settings: Settings):
 
 
 def test_throttle_enforces_minimum_interval():
-    settings = Settings(user_agent="Test test@example.com", rate_limit_per_second=10.0, max_attempts=1)
+    settings = Settings(
+        user_agent="Test test@example.com", rate_limit_per_second=10.0, max_attempts=1
+    )
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, text="ok")

@@ -91,4 +91,4 @@ class Settings(BaseSettings):
 @functools.lru_cache
 def get_settings() -> Settings:
     """Load settings once per process from the environment."""
-    return Settings()  # type: ignore[call-arg]  # pydantic-settings fills user_agent from env
+    return Settings()  # pydantic-settings fills user_agent from the SEC_USER_AGENT env var
