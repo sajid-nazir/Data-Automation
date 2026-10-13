@@ -1,6 +1,6 @@
 import pytest
 
-from src.resolver import resolve_latest_10k
+from sec_filings.resolver import resolve_latest_10k
 
 
 @pytest.fixture

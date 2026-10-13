@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from src.models import FilingMetadata
+from sec_filings.models import FilingMetadata
 
 VALID_KWARGS = dict(
     ticker="AAPL",

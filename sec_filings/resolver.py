@@ -6,8 +6,8 @@ from typing import Any
 
 from pydantic import HttpUrl
 
-from src.config import Settings, settings
-from src.models import FilingMetadata
+from sec_filings.config import Settings, settings
+from sec_filings.models import FilingMetadata
 
 
 def resolve_latest_10k(

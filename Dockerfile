@@ -19,7 +19,7 @@ RUN pip install --no-cache-dir -r requirements.txt \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-COPY src/ src/
+COPY sec_filings/ sec_filings/
 
 RUN groupadd --gid 1000 appuser \
     && useradd --uid 1000 --gid appuser --create-home --shell /usr/sbin/nologin appuser \
@@ -28,5 +28,5 @@ RUN groupadd --gid 1000 appuser \
 
 USER appuser
 
-ENTRYPOINT ["python", "-m", "src.pipeline"]
+ENTRYPOINT ["python", "-m", "sec_filings.pipeline"]
 CMD []

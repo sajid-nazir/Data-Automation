@@ -4,8 +4,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.config import TARGET_COMPANIES, settings
-from src.pipeline import main, run
+from sec_filings.config import TARGET_COMPANIES, settings
+from sec_filings.pipeline import main, run
 
 
 def _submissions_with_10k(accession: str, filing_date: str, report_date: str, doc: str) -> dict:
@@ -63,8 +63,8 @@ def mock_converter() -> MagicMock:
 def _patch_client_and_converter(mock_client: MagicMock, mock_converter: MagicMock):
     client_cls = _as_context_manager(mock_client)
     converter_cls = _as_context_manager(mock_converter)
-    with patch("src.pipeline.SECClient", client_cls), patch(
-        "src.pipeline.HTMLToPDFConverter", converter_cls
+    with patch("sec_filings.pipeline.SECClient", client_cls), patch(
+        "sec_filings.pipeline.HTMLToPDFConverter", converter_cls
     ):
         yield client_cls, converter_cls
 

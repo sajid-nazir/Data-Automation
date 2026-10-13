@@ -8,7 +8,7 @@ from typing import Any, cast
 
 import httpx
 
-from src.config import Settings, settings
+from sec_filings.config import Settings, settings
 
 logger = logging.getLogger(__name__)
 

@@ -10,12 +10,12 @@ CLI orchestrator:
 
 | Module | Responsibility |
 |---|---|
-| `src/config.py` | SEC endpoints, compliant User-Agent, rate limit, output paths, target company registry |
-| `src/client.py` | `SECClient` — all HTTP traffic to sec.gov |
-| `src/resolver.py` | Parses `filings.recent`'s parallel arrays into a typed `FilingMetadata` |
-| `src/sanitizer.py` | Prepares fetched HTML for offline rendering (strips scripts, inlines images) |
-| `src/converter.py` | `HTMLToPDFConverter` — renders already-fetched HTML to PDF via Playwright |
-| `src/pipeline.py` | CLI entrypoint: fetch → resolve → convert → save, per ticker |
+| `sec_filings/config.py` | SEC endpoints, compliant User-Agent, rate limit, output paths, target company registry |
+| `sec_filings/client.py` | `SECClient` — all HTTP traffic to sec.gov |
+| `sec_filings/resolver.py` | Parses `filings.recent`'s parallel arrays into a typed `FilingMetadata` |
+| `sec_filings/sanitizer.py` | Prepares fetched HTML for offline rendering (strips scripts, inlines images) |
+| `sec_filings/converter.py` | `HTMLToPDFConverter` — renders already-fetched HTML to PDF via Playwright |
+| `sec_filings/pipeline.py` | CLI entrypoint: fetch → resolve → convert → save, per ticker |
 
 ### Fetching and rendering are deliberately decoupled
 
@@ -51,7 +51,7 @@ such header), hand Playwright only the resulting markup.
 Routing the fetch through `SECClient` surfaced a second problem: the fetched HTML
 references images by paths relative to the SEC archive folder and embeds a
 bot-detection sensor script at an absolute path — neither resolves once the document is
-rendered from a local temp file. `src/sanitizer.py` fixes both before the HTML ever
+rendered from a local temp file. `sec_filings/sanitizer.py` fixes both before the HTML ever
 reaches the renderer: `inline_images()` fetches each relative image through the same
 rate-limited client and inlines it as a base64 data URI; `strip_scripts()` removes all
 `<script>` tags, since nothing about a static PDF render depends on JS execution.
@@ -90,10 +90,10 @@ pip install -r requirements.txt
 playwright install chromium
 
 # Defaults to every company in TARGET_COMPANIES
-python -m src.pipeline
+python -m sec_filings.pipeline
 
 # Or specific tickers
-python -m src.pipeline AAPL META
+python -m sec_filings.pipeline AAPL META
 ```
 
 PDFs land in `./output/{TICKER}/{TICKER}_10K_{filing_date}.pdf`.
@@ -126,7 +126,7 @@ docker compose run --rm sec-10k-fetcher AAPL META  # specific tickers
 ### Configuration
 
 All settings are overridable via `SEC_`-prefixed environment variables (see
-`src/config.py`), most notably:
+`sec_filings/config.py`), most notably:
 
 ```bash
 export SEC_USER_AGENT="Your Company your-contact@example.com"
@@ -141,7 +141,7 @@ export SEC_USER_AGENT="Your Company your-contact@example.com"
 ├── pyproject.toml
 ├── requirements.txt
 ├── requirements-dev.txt
-├── src/
+├── sec_filings/
 │   ├── config.py       # Settings + TARGET_COMPANIES registry
 │   ├── models.py       # FilingMetadata (Pydantic)
 │   ├── client.py       # SECClient — rate-limited, retrying HTTP
@@ -165,7 +165,7 @@ export SEC_USER_AGENT="Your Company your-contact@example.com"
 pip install -r requirements-dev.txt
 
 pytest tests/ -v
-mypy src/
+mypy sec_filings/
 ```
 
 All tests run against mocks — no network calls or real browser launches in CI.

@@ -7,11 +7,11 @@ import logging
 import sys
 from collections.abc import Sequence
 
-from src.client import SECClient
-from src.config import TARGET_COMPANIES, settings
-from src.converter import HTMLToPDFConverter
-from src.resolver import resolve_latest_10k
-from src.sanitizer import inline_images, strip_scripts
+from sec_filings.client import SECClient
+from sec_filings.config import TARGET_COMPANIES, settings
+from sec_filings.converter import HTMLToPDFConverter
+from sec_filings.resolver import resolve_latest_10k
+from sec_filings.sanitizer import inline_images, strip_scripts
 
 logger = logging.getLogger(__name__)
 

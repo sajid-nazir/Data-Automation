@@ -14,7 +14,7 @@ import mimetypes
 import re
 from urllib.parse import urljoin
 
-from src.client import SECClient
+from sec_filings.client import SECClient
 
 _SCRIPT_TAG = re.compile(r"<script\b[^>]*?(?:/>|>.*?</script\s*>)", re.IGNORECASE | re.DOTALL)
 _IMG_SRC = re.compile(r'(<img\b[^>]*?\bsrc=")([^"]+)(")', re.IGNORECASE)

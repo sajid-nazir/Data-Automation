@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
 
-from src.sanitizer import inline_images, strip_scripts
+from sec_filings.sanitizer import inline_images, strip_scripts
 
 
 def test_strip_scripts_removes_normal_script_tag():

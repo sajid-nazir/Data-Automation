@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.converter import ConversionError, HTMLToPDFConverter
+from sec_filings.converter import ConversionError, HTMLToPDFConverter
 
 
 def _make_mock_playwright():
@@ -20,7 +20,7 @@ def _make_mock_playwright():
     return factory, browser, context, page
 
 
-@patch("src.converter.sync_playwright")
+@patch("sec_filings.converter.sync_playwright")
 def test_convert_html_to_pdf_renders_landscape_wide_pdf_from_local_file(
     mock_sync_playwright, tmp_path: Path
 ):
@@ -43,7 +43,7 @@ def test_convert_html_to_pdf_renders_landscape_wide_pdf_from_local_file(
     browser.close.assert_called_once()
 
 
-@patch("src.converter.sync_playwright")
+@patch("sec_filings.converter.sync_playwright")
 def test_convert_html_to_pdf_cleans_up_temp_file(mock_sync_playwright, tmp_path: Path):
     factory, browser, context, page = _make_mock_playwright()
     mock_sync_playwright.return_value = factory
@@ -56,7 +56,7 @@ def test_convert_html_to_pdf_cleans_up_temp_file(mock_sync_playwright, tmp_path:
     assert not tmp_html_path.exists()
 
 
-@patch("src.converter.sync_playwright")
+@patch("sec_filings.converter.sync_playwright")
 def test_convert_raises_conversion_error_when_goto_fails(mock_sync_playwright, tmp_path: Path):
     factory, browser, context, page = _make_mock_playwright()
     mock_sync_playwright.return_value = factory
@@ -67,7 +67,7 @@ def test_convert_raises_conversion_error_when_goto_fails(mock_sync_playwright, t
             converter.convert_html_to_pdf("<html></html>", tmp_path / "filing.pdf")
 
 
-@patch("src.converter.sync_playwright")
+@patch("sec_filings.converter.sync_playwright")
 def test_convert_raises_conversion_error_when_pdf_render_fails(mock_sync_playwright, tmp_path: Path):
     factory, browser, context, page = _make_mock_playwright()
     mock_sync_playwright.return_value = factory

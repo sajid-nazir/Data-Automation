@@ -3,8 +3,8 @@ import time
 import httpx
 import pytest
 
-from src.client import SECBlockedError, SECClient, SECRequestError
-from src.config import Settings
+from sec_filings.client import SECBlockedError, SECClient, SECRequestError
+from sec_filings.config import Settings
 
 
 @pytest.fixture

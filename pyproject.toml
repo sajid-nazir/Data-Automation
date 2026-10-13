@@ -23,10 +23,10 @@ dev = [
 ]
 
 [project.scripts]
-sec-10k-fetch = "src.pipeline:main"
+sec-10k-fetch = "sec_filings.pipeline:main"
 
 [tool.setuptools.packages.find]
-include = ["src*"]
+include = ["sec_filings*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
