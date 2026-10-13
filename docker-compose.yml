@@ -10,5 +10,9 @@ services:
       SEC_USER_AGENT: ${SEC_USER_AGENT:-SEC 10-K Fetcher sajidchnazir@gmail.com}
     volumes:
       - ./output:/app/output
+    # Chromium uses /dev/shm for tab rendering; Docker's 64MB default is too small
+    # for dense, image-heavy filings and causes silent rendering degradation or
+    # crashes under memory pressure rather than a clear error.
+    shm_size: "1gb"
     # No tickers here means the pipeline defaults to every company in TARGET_COMPANIES.
     # command: ["AAPL", "META"]
